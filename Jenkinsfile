@@ -1,25 +1,52 @@
-node {
+pipeline {
+    agent any
 
- stage('SCM') {
+    environment {
+        DOTNET_CLI_HOME = "C:\\Program Files\\dotnet"
+    }
 
-  checkout scm
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
 
- }
+        stage('Build') {
+            steps {
+                script {
+                    // Restoring dependencies
+                    //bat "cd ${DOTNET_CLI_HOME} && dotnet restore"
+                    bat "dotnet restore"
 
- stage('SonarQube Analysis') {
+                    // Building the application
+                    bat "dotnet build --configuration Release"
+                }
+            }
+        }
 
-  def scannerHome = tool 'SonarScanner for MSBuild'
+        stage('Test') {
+            steps {
+                script {
+                    // Running tests
+                    bat "dotnet test --no-restore --configuration Release"
+                }
+            }
+        }
 
-  withSonarQubeEnv() {
+        stage('Publish') {
+            steps {
+                script {
+                    // Publishing the application
+                    bat "dotnet publish --no-restore --configuration Release --output .\\publish"
+                }
+            }
+        }
+    }
 
-   bat "${scannerHome}\\SonarScanner.MSBuild.exe begin /k:\"scandotnetcorewithjenkins\""
-
-   bat "dotnet build"
-
-   bat "${scannerHome}\\SonarScanner.MSBuild.exe end"
-
-  }
-
- }
-
+    post {
+        success {
+            echo 'Build, test, and publish successful!'
+        }
+    }
 }
